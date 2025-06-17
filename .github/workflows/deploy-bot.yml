@@ -1,14 +1,17 @@
-name: 🧪 简单测试
+name: 🤖 Telegram机器人部署
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    # 每6小时重启一次，保持活跃
+    - cron: '0 */6 * * *'
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 360  # 6小时超时
     
     steps:
     - name: 📥 检出代码
@@ -19,19 +22,20 @@ jobs:
       with:
         python-version: '3.11'
         
-    - name: 📦 安装基础依赖
+    - name: 📦 安装依赖
       run: |
         python -m pip install --upgrade pip
-        pip install requests python-telegram-bot python-dotenv pytz
+        pip install -r requirements.txt
         
-    - name: 🔧 创建简单配置
+    - name: 🔧 配置环境
       run: |
         mkdir -p 配置文件
         echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" > 配置文件/环境配置.env
         echo "LOG_LEVEL=INFO" >> 配置文件/环境配置.env
         echo "TIMEZONE=Asia/Shanghai" >> 配置文件/环境配置.env
+        echo "DATABASE_PATH=phone_records.db" >> 配置文件/环境配置.env
         
-    - name: 🤖 测试机器人连接
+    - name: 🧪 测试机器人连接
       run: |
         python -c "
         import requests
@@ -66,20 +70,26 @@ jobs:
             exit(1)
         "
         
-    - name: 📋 测试项目结构
+    - name: 🚀 启动机器人
       run: |
-        echo "📁 项目结构检查:"
-        ls -la
-        echo ""
-        echo "📁 核心模块:"
-        ls -la 核心模块/ || echo "❌ 核心模块目录不存在"
-        echo ""
-        echo "📁 配置文件:"
-        ls -la 配置文件/ || echo "❌ 配置文件目录不存在"
+        echo "🤖 启动Telegram客户号码统计机器人..."
+        echo "⏰ 开始时间: $(date)"
+        echo "🔄 将运行约6小时后自动重启"
+        echo "📊 使用简化版机器人程序"
         
-    - name: ✅ 测试完成
-      run: |
-        echo "🎉 简单测试完成！"
-        echo "✅ 机器人 Token 有效"
-        echo "✅ Python 环境正常"
-        echo "✅ 基础依赖安装成功"
+        # 启动机器人，设置超时
+        timeout 21000 python 简化机器人.py || {
+          echo "⚠️ 机器人运行超时，准备重启..."
+          echo "⏰ 结束时间: $(date)"
+          exit 0
+        }
+        
+    - name: 📊 上传日志和数据
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: bot-data-${{ github.run_number }}
+        path: |
+          *.log
+          *.db
+        retention-days: 7

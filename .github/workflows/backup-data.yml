@@ -1,0 +1,136 @@
+name: 💾 数据备份
+
+on:
+  schedule:
+    # 每天凌晨2点备份
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 🐍 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: 📦 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: 🔧 配置环境
+      run: |
+        mkdir -p 配置文件
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" > 配置文件/环境配置.env
+        echo "LOG_LEVEL=INFO" >> 配置文件/环境配置.env
+        echo "TIMEZONE=Asia/Shanghai" >> 配置文件/环境配置.env
+        echo "DATABASE_PATH=phone_records.db" >> 配置文件/环境配置.env
+        
+    - name: 💾 创建数据备份
+      run: |
+        echo "💾 开始数据备份..."
+        echo "⏰ 备份时间: $(date)"
+        
+        # 创建备份目录
+        mkdir -p backup
+        
+        # 如果数据库文件存在，创建备份
+        if [ -f "phone_records.db" ]; then
+            cp phone_records.db backup/phone_records_$(date +%Y%m%d_%H%M%S).db
+            echo "✅ 数据库备份完成"
+        else
+            echo "⚠️ 数据库文件不存在，创建空备份"
+            touch backup/no_database_$(date +%Y%m%d_%H%M%S).txt
+        fi
+        
+        # 备份日志文件
+        if [ -f "bot.log" ]; then
+            cp bot.log backup/bot_$(date +%Y%m%d_%H%M%S).log
+            echo "✅ 日志备份完成"
+        fi
+        
+        # 创建备份信息文件
+        cat > backup/backup_info.json << EOF
+        {
+            "backup_time": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "backup_date": "$(date +%Y-%m-%d)",
+            "github_run_number": "${{ github.run_number }}",
+            "github_sha": "${{ github.sha }}",
+            "files_backed_up": [
+                $(ls backup/ | grep -v backup_info.json | sed 's/.*/"&"/' | paste -sd,)
+            ]
+        }
+        EOF
+        
+        echo "📋 备份文件列表:"
+        ls -la backup/
+        
+    - name: 📊 生成备份报告
+      run: |
+        python -c "
+        import json
+        import sqlite3
+        import os
+        from datetime import datetime
+        
+        # 生成备份统计报告
+        report = {
+            'backup_time': datetime.now().isoformat(),
+            'total_files': 0,
+            'database_records': 0,
+            'log_size': 0
+        }
+        
+        # 统计备份文件
+        if os.path.exists('backup'):
+            backup_files = os.listdir('backup')
+            report['total_files'] = len(backup_files)
+            print(f'📁 备份文件数量: {len(backup_files)}')
+        
+        # 如果数据库存在，统计记录数
+        if os.path.exists('phone_records.db'):
+            try:
+                conn = sqlite3.connect('phone_records.db')
+                cursor = conn.cursor()
+                cursor.execute('SELECT COUNT(*) FROM phone_records')
+                count = cursor.fetchone()[0]
+                report['database_records'] = count
+                conn.close()
+                print(f'📊 数据库记录数: {count}')
+            except Exception as e:
+                print(f'⚠️ 读取数据库失败: {e}')
+        
+        # 统计日志大小
+        if os.path.exists('bot.log'):
+            log_size = os.path.getsize('bot.log')
+            report['log_size'] = log_size
+            print(f'📝 日志文件大小: {log_size} bytes')
+        
+        # 保存报告
+        with open('backup/backup_report.json', 'w') as f:
+            json.dump(report, f, indent=2)
+        
+        print('✅ 备份报告生成完成')
+        "
+        
+    - name: 📤 上传备份文件
+      uses: actions/upload-artifact@v4
+      with:
+        name: daily-backup-${{ github.run_number }}
+        path: backup/
+        retention-days: 30
+        
+    - name: ✅ 备份完成
+      run: |
+        echo "🎉 数据备份完成！"
+        echo "📅 备份日期: $(date +%Y-%m-%d)"
+        echo "⏰ 备份时间: $(date)"
+        echo "📦 备份已上传到 GitHub Artifacts"
+        echo "🗂️ 保留期限: 30天"
