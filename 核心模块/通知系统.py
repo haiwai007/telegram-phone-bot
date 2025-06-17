@@ -7,8 +7,8 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 import pytz
-from 配置管理 import Config
-from 数据库管理 import DatabaseManager
+from .配置管理 import Config
+from .数据库管理 import DatabaseManager
 
 logger = logging.getLogger(__name__)
 

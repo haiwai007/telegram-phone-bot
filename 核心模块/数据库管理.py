@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from contextlib import contextmanager
 import pytz
-from 配置管理 import Config
+from .配置管理 import Config
 
 logger = logging.getLogger(__name__)
 

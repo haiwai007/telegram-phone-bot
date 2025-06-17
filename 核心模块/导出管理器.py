@@ -12,7 +12,7 @@ import tempfile
 import os
 from pathlib import Path
 import pytz
-from 配置管理 import Config
+from .配置管理 import Config
 
 logger = logging.getLogger(__name__)
 

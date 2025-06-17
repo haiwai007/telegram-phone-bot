@@ -28,7 +28,7 @@ def main():
         print()
         
         # 导入机器人主程序
-        from 机器人主程序 import main as bot_main
+        from 核心模块 import main as bot_main
         return bot_main()
         
     except ImportError as e:

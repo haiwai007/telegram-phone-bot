@@ -6,7 +6,7 @@
 import re
 import logging
 from typing import Optional, List, Tuple
-from 配置管理 import Config
+from .配置管理 import Config
 
 logger = logging.getLogger(__name__)
 
