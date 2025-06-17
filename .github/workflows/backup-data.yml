@@ -87,7 +87,7 @@ jobs:
         python 备份数据/backup_script.py
         
     - name: 📤 上传备份文件
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: data-backup-${{ github.run_number }}
         path: 备份数据/*.json

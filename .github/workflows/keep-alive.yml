@@ -65,7 +65,7 @@ jobs:
         
     - name: 📊 上传实例日志
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: bot-logs-instance-${{ matrix.instance }}-${{ github.run_number }}
         path: |
