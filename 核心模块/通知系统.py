@@ -5,7 +5,7 @@
 
 import logging
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 import pytz
 from 配置管理 import Config
 from 数据库管理 import DatabaseManager
@@ -122,7 +122,7 @@ class NotificationSystem:
     
     def process_phone_submission(self, phone_number: str, telegram_username: str,
                                telegram_user_id: int, first_name: str,
-                               group_id: int, original_message: str) -> tuple[str, bool]:
+                               group_id: int, original_message: str) -> Tuple[str, bool]:
         """
         处理号码提交并生成相应的通知消息
         返回: (notification_message, is_duplicate)

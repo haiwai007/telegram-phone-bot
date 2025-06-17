@@ -50,7 +50,7 @@ jobs:
         echo "🔄 将运行约6小时"
         
         # 启动机器人，设置超时
-        timeout 21000 python 简化机器人.py || {
+        timeout 21000 python 启动机器人.py || {
           echo "⚠️ 实例 ${{ matrix.instance }} 运行超时，正常结束"
           echo "⏰ 结束时间: $(date)"
           exit 0

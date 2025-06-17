@@ -444,7 +444,7 @@ class TelegramPhoneBot:
                 return
 
             # 格式化最近记录
-            message = self.notification_system.format_recent_records(recent_records, limit)
+            message = self.notification_system.format_recent_records(recent_records)
             await update.message.reply_text(message, parse_mode='Markdown')
 
             logger.info(f"用户 {update.message.from_user.id} 查看了最近 {limit} 条记录")
@@ -469,7 +469,7 @@ class TelegramPhoneBot:
                 export_format = context.args[0].lower()
 
             # 获取所有记录
-            all_records = self.db_manager.get_all_records()
+            all_records = self.db_manager.export_all_records()
 
             if not all_records:
                 await processing_msg.edit_text("📝 暂无数据可导出")
@@ -522,7 +522,7 @@ class TelegramPhoneBot:
             processing_msg = await update.message.reply_text("📊 正在生成汇总报告，请稍候...")
 
             # 获取所有记录
-            all_records = self.db_manager.get_all_records()
+            all_records = self.db_manager.export_all_records()
 
             if not all_records:
                 await processing_msg.edit_text("📝 暂无数据可生成报告")
