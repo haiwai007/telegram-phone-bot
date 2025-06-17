@@ -1,0 +1,174 @@
+name: 🗑️ 清空数据库
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '确认清空数据库 (输入 "CONFIRM" 确认)'
+        required: true
+        default: ''
+
+jobs:
+  clear-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 🐍 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: 📦 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        # 检查文件是否存在
+        if [ -f "requirements.txt" ]; then
+          echo "✅ 找到 requirements.txt"
+          pip install -r requirements.txt
+        else
+          echo "❌ 未找到 requirements.txt，使用手动安装"
+          pip install python-telegram-bot==20.8 python-dotenv==1.0.1 requests==2.31.0 pytz==2023.3
+        fi
+        
+    - name: 🔧 配置环境
+      run: |
+        mkdir -p 配置文件
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" > 配置文件/环境配置.env
+        echo "LOG_LEVEL=INFO" >> 配置文件/环境配置.env
+        echo "TIMEZONE=Asia/Shanghai" >> 配置文件/环境配置.env
+        echo "DATABASE_PATH=phone_records.db" >> 配置文件/环境配置.env
+        
+    - name: ✋ 验证确认输入
+      run: |
+        if [ "${{ github.event.inputs.confirm }}" != "CONFIRM" ]; then
+          echo "❌ 未正确确认清空操作"
+          echo "💡 请在工作流输入中输入 'CONFIRM' 来确认清空数据库"
+          exit 1
+        fi
+        echo "✅ 确认输入验证通过"
+        
+    - name: 📊 检查当前数据库状态
+      run: |
+        echo "📊 检查数据库状态..."
+        python -c "
+        import os
+        import sqlite3
+        from pathlib import Path
+        
+        db_path = 'phone_records.db'
+        
+        if not os.path.exists(db_path):
+            print('📝 数据库文件不存在')
+            exit(0)
+        
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 获取所有表
+            cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\";')
+            tables = cursor.fetchall()
+            
+            if not tables:
+                print('📝 数据库中没有表')
+                conn.close()
+                exit(0)
+            
+            total_records = 0
+            for table in tables:
+                table_name = table[0]
+                cursor.execute(f'SELECT COUNT(*) FROM {table_name}')
+                count = cursor.fetchone()[0]
+                print(f'📋 表 {table_name}: {count} 条记录')
+                total_records += count
+            
+            print(f'📊 总记录数: {total_records}')
+            conn.close()
+            
+            if total_records == 0:
+                print('📝 数据库已经是空的')
+                exit(0)
+                
+        except Exception as e:
+            print(f'❌ 检查数据库失败: {e}')
+            exit(1)
+        "
+        
+    - name: 🗑️ 执行数据库清空
+      run: |
+        echo "🗑️ 开始清空数据库..."
+        echo "⏰ 开始时间: $(date)"
+        
+        python 清空数据库.py
+        
+        echo "⏰ 完成时间: $(date)"
+        
+    - name: 📊 验证清空结果
+      run: |
+        echo "📊 验证清空结果..."
+        python -c "
+        import os
+        import sqlite3
+        
+        db_path = 'phone_records.db'
+        
+        if not os.path.exists(db_path):
+            print('✅ 数据库文件已删除')
+            exit(0)
+        
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # 获取所有表
+            cursor.execute('SELECT name FROM sqlite_master WHERE type=\"table\";')
+            tables = cursor.fetchall()
+            
+            if not tables:
+                print('✅ 数据库中没有表')
+                conn.close()
+                exit(0)
+            
+            total_records = 0
+            for table in tables:
+                table_name = table[0]
+                cursor.execute(f'SELECT COUNT(*) FROM {table_name}')
+                count = cursor.fetchone()[0]
+                total_records += count
+            
+            conn.close()
+            
+            if total_records == 0:
+                print('✅ 数据库清空成功，所有表都是空的')
+            else:
+                print(f'⚠️ 数据库清空不完整，仍有 {total_records} 条记录')
+                exit(1)
+                
+        except Exception as e:
+            print(f'❌ 验证失败: {e}')
+            exit(1)
+        "
+        
+    - name: 📤 上传备份文件
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: database-backup-${{ github.run_number }}
+        path: |
+          *.backup_*
+          *.db
+        retention-days: 30
+        
+    - name: ✅ 清空完成
+      run: |
+        echo "🎉 数据库清空操作完成！"
+        echo "📅 清空日期: $(date +%Y-%m-%d)"
+        echo "⏰ 清空时间: $(date)"
+        echo "💾 备份文件已上传到 GitHub Artifacts"
+        echo "🗂️ 备份保留期限: 30天"
+        echo ""
+        echo "⚠️ 注意: 此操作不可逆，请确保您真的需要清空数据库"
