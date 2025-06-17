@@ -1,0 +1,72 @@
+name: 🤖 Telegram机器人部署
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # 每6小时重启一次，避免GitHub Actions超时
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    # 允许手动触发
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350  # 设置为5小时50分钟，避免6小时限制
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 🐍 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: 📦 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r 配置文件/依赖包列表.txt
+        
+    - name: 🔧 配置环境变量
+      run: |
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> 配置文件/环境配置.env
+        echo "DATABASE_PATH=phone_records.db" >> 配置文件/环境配置.env
+        echo "LOG_LEVEL=INFO" >> 配置文件/环境配置.env
+        echo "LOG_FILE=bot.log" >> 配置文件/环境配置.env
+        echo "TIMEZONE=Asia/Shanghai" >> 配置文件/环境配置.env
+        echo "MAX_PHONE_LENGTH=15" >> 配置文件/环境配置.env
+        echo "MIN_PHONE_LENGTH=8" >> 配置文件/环境配置.env
+        echo "RATE_LIMIT_MESSAGES=10" >> 配置文件/环境配置.env
+        echo "RATE_LIMIT_WINDOW=60" >> 配置文件/环境配置.env
+        echo "AUTHORIZED_GROUPS=${{ secrets.AUTHORIZED_GROUPS }}" >> 配置文件/环境配置.env
+        
+    - name: 🧪 运行测试
+      run: |
+        python 测试文件/测试运行器.py
+        
+    - name: 🚀 启动机器人
+      run: |
+        echo "🤖 启动Telegram客户号码统计机器人..."
+        echo "⏰ 开始时间: $(date)"
+        echo "🔄 将运行约6小时后自动重启"
+        
+        # 设置超时处理
+        timeout 21000 python 启动机器人.py || {
+          echo "⚠️ 机器人运行超时，准备重启..."
+          echo "⏰ 结束时间: $(date)"
+          exit 0
+        }
+        
+    - name: 📊 上传日志
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: bot-logs-${{ github.run_number }}
+        path: |
+          日志数据/*.log
+          日志数据/*.db
+        retention-days: 7

@@ -1,0 +1,89 @@
+# Python 缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 分发/打包
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# 单元测试/覆盖率报告
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# 环境变量（本地开发）
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 本地开发文件（GitHub Actions 中会动态生成）
+# 注释掉以允许 GitHub Actions 生成和使用这些文件
+# *.log
+# *.db
+# *.sqlite
+# *.sqlite3
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# 导出文件
+exports/
+*.csv
+*.json
+*.txt
+
+# GitHub Actions 相关
+.github/workflows/*.log
+
+# 备份文件
+备份数据/

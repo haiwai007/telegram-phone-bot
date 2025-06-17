@@ -1,0 +1,74 @@
+name: 🔄 保持机器人运行
+
+on:
+  schedule:
+    # 每5小时50分钟触发一次，确保连续运行
+    - cron: '50 */5 * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    
+    strategy:
+      matrix:
+        instance: [1, 2, 3]  # 创建3个实例，确保至少有一个在运行
+      fail-fast: false
+      
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 🐍 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: 📦 安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r 配置文件/依赖包列表.txt
+        
+    - name: 🔧 配置环境变量
+      run: |
+        echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> 配置文件/环境配置.env
+        echo "DATABASE_PATH=phone_records_${{ matrix.instance }}.db" >> 配置文件/环境配置.env
+        echo "LOG_LEVEL=INFO" >> 配置文件/环境配置.env
+        echo "LOG_FILE=bot_${{ matrix.instance }}.log" >> 配置文件/环境配置.env
+        echo "TIMEZONE=Asia/Shanghai" >> 配置文件/环境配置.env
+        echo "MAX_PHONE_LENGTH=15" >> 配置文件/环境配置.env
+        echo "MIN_PHONE_LENGTH=8" >> 配置文件/环境配置.env
+        echo "RATE_LIMIT_MESSAGES=10" >> 配置文件/环境配置.env
+        echo "RATE_LIMIT_WINDOW=60" >> 配置文件/环境配置.env
+        echo "AUTHORIZED_GROUPS=${{ secrets.AUTHORIZED_GROUPS }}" >> 配置文件/环境配置.env
+        
+    - name: ⏰ 等待启动时间差
+      run: |
+        # 为不同实例设置启动延迟，避免冲突
+        delay=$(((${{ matrix.instance }} - 1) * 30))
+        echo "实例 ${{ matrix.instance }} 等待 ${delay} 秒后启动..."
+        sleep $delay
+        
+    - name: 🚀 启动机器人实例 ${{ matrix.instance }}
+      run: |
+        echo "🤖 启动机器人实例 ${{ matrix.instance }}..."
+        echo "⏰ 开始时间: $(date)"
+        
+        # 使用超时控制，确保在GitHub Actions限制前结束
+        timeout 20700 python 启动机器人.py || {
+          echo "⚠️ 实例 ${{ matrix.instance }} 运行完成"
+          echo "⏰ 结束时间: $(date)"
+          exit 0
+        }
+        
+    - name: 📊 上传实例日志
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: bot-logs-instance-${{ matrix.instance }}-${{ github.run_number }}
+        path: |
+          日志数据/*.log
+          日志数据/*.db
+        retention-days: 3

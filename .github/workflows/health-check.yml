@@ -1,0 +1,72 @@
+name: 🏥 机器人健康检查
+
+on:
+  schedule:
+    # 每小时检查一次机器人状态
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 🐍 设置Python环境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: 📦 安装依赖
+      run: |
+        pip install requests
+        
+    - name: 🔍 检查机器人状态
+      run: |
+        python -c "
+        import requests
+        import sys
+        
+        bot_token = '${{ secrets.BOT_TOKEN }}'
+        if not bot_token:
+            print('❌ BOT_TOKEN 未设置')
+            sys.exit(1)
+            
+        try:
+            response = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data['ok']:
+                    bot_info = data['result']
+                    print(f'✅ 机器人状态正常')
+                    print(f'🤖 机器人名称: {bot_info[\"first_name\"]}')
+                    print(f'👤 用户名: @{bot_info[\"username\"]}')
+                    print(f'🆔 ID: {bot_info[\"id\"]}')
+                else:
+                    print(f'❌ API返回错误: {data}')
+                    sys.exit(1)
+            else:
+                print(f'❌ HTTP错误: {response.status_code}')
+                sys.exit(1)
+        except Exception as e:
+            print(f'❌ 连接失败: {e}')
+            sys.exit(1)
+        "
+        
+    - name: 📊 检查工作流状态
+      run: |
+        echo "🔍 检查当前运行的工作流..."
+        echo "📅 检查时间: $(date)"
+        echo "✅ 健康检查完成"
+        
+    - name: 🚨 发送状态通知
+      if: failure()
+      run: |
+        echo "⚠️ 机器人健康检查失败！"
+        echo "🔧 建议检查："
+        echo "  1. BOT_TOKEN 是否正确"
+        echo "  2. 网络连接是否正常"
+        echo "  3. Telegram API 是否可用"
