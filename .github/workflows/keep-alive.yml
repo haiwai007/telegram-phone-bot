@@ -2,17 +2,18 @@ name: 🔄 保持机器人运行
 
 on:
   schedule:
-    # 每5小时50分钟启动一次，确保连续运行
-    - cron: '50 */5 * * *'
+    # 每6小时10分钟启动一次，作为备用实例
+    - cron: '10 */6 * * *'
   workflow_dispatch:
 
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
     timeout-minutes: 360  # 6小时超时
-    strategy:
-      matrix:
-        instance: [1, 2, 3]  # 3个并行实例
+    # 移除并行实例，避免冲突
+    # strategy:
+    #   matrix:
+    #     instance: [1, 2, 3]  # 3个并行实例
     
     steps:
     - name: 📥 检出代码
@@ -43,24 +44,27 @@ jobs:
         echo "TIMEZONE=Asia/Shanghai" >> 配置文件/环境配置.env
         echo "DATABASE_PATH=phone_records.db" >> 配置文件/环境配置.env
         
-    - name: 🚀 启动机器人实例 ${{ matrix.instance }}
+    - name: 🚀 启动机器人备用实例
       run: |
-        echo "🤖 启动机器人实例 ${{ matrix.instance }}..."
+        echo "🤖 启动机器人备用实例..."
         echo "⏰ 开始时间: $(date)"
         echo "🔄 将运行约6小时"
-        
+
+        # 设置备用实例环境变量
+        export GITHUB_WORKFLOW="keep-alive"
+
         # 启动机器人，设置超时
-        timeout 21000 python 启动机器人.py || {
-          echo "⚠️ 实例 ${{ matrix.instance }} 运行超时，正常结束"
+        timeout 21000 python 智能启动机器人.py || {
+          echo "⚠️ 备用实例运行超时，正常结束"
           echo "⏰ 结束时间: $(date)"
           exit 0
         }
         
-    - name: 📊 上传实例日志
+    - name: 📊 上传备用实例日志
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: instance-${{ matrix.instance }}-logs-${{ github.run_number }}
+        name: backup-instance-logs-${{ github.run_number }}
         path: |
           *.log
           *.db
