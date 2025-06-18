@@ -1,10 +1,10 @@
 name: 💾 数据备份
 
 on:
-  schedule:
-    # 每天凌晨2点备份
-    - cron: '0 2 * * *'
   workflow_dispatch:
+  schedule:
+    # 每周备份一次 (周日凌晨2点 UTC)
+    - cron: '0 2 * * 0'
 
 jobs:
   backup:

@@ -1,17 +1,17 @@
-name: 🤖 Telegram机器人部署
+name: 🤖 Telegram机器人24小时运行
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
   schedule:
-    # 每6小时重启一次，保持活跃
-    - cron: '0 */6 * * *'
+    # 每天重启一次 (UTC 00:00, 北京时间 08:00)
+    - cron: '0 0 * * *'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # 6小时超时
+    timeout-minutes: 1440  # 24小时超时 (1440分钟)
     
     steps:
     - name: 📥 检出代码
@@ -78,16 +78,16 @@ jobs:
             exit(1)
         "
         
-    - name: 🚀 启动机器人
+    - name: 🚀 启动机器人24小时运行
       run: |
         echo "🤖 启动Telegram客户号码统计机器人..."
         echo "⏰ 开始时间: $(date)"
-        echo "🔄 将运行约6小时后自动重启"
-        echo "📊 使用简化版机器人程序"
-        
-        # 启动机器人，设置超时
-        timeout 21000 python 启动机器人.py || {
-          echo "⚠️ 机器人运行超时，准备重启..."
+        echo "🔄 将运行24小时后自动重启"
+        echo "📊 24小时持续运行模式"
+
+        # 启动机器人，运行24小时 (86400秒)
+        timeout 86400 python 启动机器人.py || {
+          echo "⚠️ 机器人运行24小时完成，准备重启..."
           echo "⏰ 结束时间: $(date)"
           exit 0
         }
