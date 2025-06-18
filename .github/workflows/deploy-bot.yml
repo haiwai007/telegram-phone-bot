@@ -86,7 +86,7 @@ jobs:
         echo "📊 使用简化版机器人程序"
         
         # 启动机器人，设置超时
-        timeout 21000 python 智能启动机器人.py || {
+        timeout 21000 python 启动机器人.py || {
           echo "⚠️ 机器人运行超时，准备重启..."
           echo "⏰ 结束时间: $(date)"
           exit 0
