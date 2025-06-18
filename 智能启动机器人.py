@@ -24,7 +24,6 @@ if env_file.exists():
 def check_bot_running(bot_token):
     """检查机器人是否已经在运行"""
     try:
-        # 尝试获取更新，如果有冲突说明已有实例在运行
         response = requests.get(
             f'https://api.telegram.org/bot{bot_token}/getUpdates',
             params={'timeout': 1, 'limit': 1},
@@ -32,10 +31,8 @@ def check_bot_running(bot_token):
         )
         
         if response.status_code == 409:
-            # 409 Conflict 表示已有实例在运行
             return True
         elif response.status_code == 200:
-            # 200 OK 表示没有冲突，可以启动
             return False
         else:
             print(f"⚠️ API返回异常状态码: {response.status_code}")
@@ -55,7 +52,7 @@ def wait_for_slot(bot_token, max_wait_minutes=10):
             return True
         
         print(f"⏳ 等待中... ({i+1}/{max_wait_minutes} 分钟)")
-        time.sleep(60)  # 等待1分钟
+        time.sleep(60)
     
     print(f"⚠️ 等待超时，其他实例可能长期运行")
     return False
@@ -92,7 +89,7 @@ def main():
                     return 0
             else:
                 print("⏹️ 主实例检测到冲突，等待片刻后重试...")
-                time.sleep(30)  # 等待30秒
+                time.sleep(30)
                 
                 if check_bot_running(bot_token):
                     print("❌ 仍有冲突，主实例退出")
