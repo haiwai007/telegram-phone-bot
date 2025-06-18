@@ -5,6 +5,8 @@ Telegram机器人主程序
 
 import logging
 import os
+import time
+import threading
 from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import Optional
@@ -55,6 +57,11 @@ class TelegramPhoneBot:
             if Config.AUTHORIZED_GROUPS and Config.AUTHORIZED_GROUPS[0]:
                 self.authorized_groups = set(map(int, Config.AUTHORIZED_GROUPS))
                 logger.info(f"已配置授权群组: {self.authorized_groups}")
+
+            # 初始化防重复处理机制
+            self._processed_messages = set()
+            self._processing_lock = threading.Lock()
+            self._last_cleanup = time.time()
 
             # 创建Telegram应用
             self.application = Application.builder().token(Config.BOT_TOKEN).build()
@@ -258,6 +265,28 @@ class TelegramPhoneBot:
         try:
             user = message.from_user
             chat = message.chat
+
+            # 防重复处理：使用线程锁确保原子性
+            message_key = f"{message.message_id}_{chat.id}_{phone_number}"
+
+            with self._processing_lock:
+                # 检查消息是否已被处理
+                if message_key in self._processed_messages:
+                    logger.debug(f"消息已处理，跳过: {message_key}")
+                    return
+
+                # 标记消息为已处理
+                self._processed_messages.add(message_key)
+
+                # 定期清理过期记录（每5分钟清理一次）
+                current_time = time.time()
+                if current_time - self._last_cleanup > 300:  # 5分钟
+                    if len(self._processed_messages) > 1000:
+                        # 保留最新的500条记录
+                        recent_messages = list(self._processed_messages)[-500:]
+                        self._processed_messages = set(recent_messages)
+                        logger.debug(f"清理处理记录，保留 {len(self._processed_messages)} 条")
+                    self._last_cleanup = current_time
 
             # 获取用户信息
             username = user.username
