@@ -1,17 +1,14 @@
-name: 🤖 Telegram机器人24小时运行
+name: 🤖 Telegram机器人永久运行
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-  schedule:
-    # 每天重启一次 (UTC 00:00, 北京时间 08:00)
-    - cron: '0 0 * * *'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 1440  # 24小时超时 (1440分钟)
+    timeout-minutes: 35000  # 约24天超时，实际永久运行
     
     steps:
     - name: 📥 检出代码
@@ -78,19 +75,16 @@ jobs:
             exit(1)
         "
         
-    - name: 🚀 启动机器人24小时运行
+    - name: 🚀 启动机器人永久运行
       run: |
         echo "🤖 启动Telegram客户号码统计机器人..."
         echo "⏰ 开始时间: $(date)"
-        echo "🔄 将运行24小时后自动重启"
-        echo "📊 24小时持续运行模式"
+        echo "♾️ 永久运行模式 - 仅手动停止"
+        echo "📊 持续运行，无自动重启"
+        echo "🛑 如需重启，请手动停止并重新运行工作流"
 
-        # 启动机器人，运行24小时 (86400秒)
-        timeout 86400 python 启动机器人.py || {
-          echo "⚠️ 机器人运行24小时完成，准备重启..."
-          echo "⏰ 结束时间: $(date)"
-          exit 0
-        }
+        # 启动机器人，永久运行模式（自动检测GitHub Actions环境）
+        python 启动机器人.py --forever
         
     - name: 📊 上传日志和数据
       if: always()

@@ -82,6 +82,52 @@ def get_startup_mode():
     else:
         return 'local'
 
+def run_forever():
+    """永久运行模式，带自动重启"""
+    max_retries = 10  # 最大重试次数
+    retry_count = 0
+    base_delay = 30  # 基础延迟时间（秒）
+
+    print("♾️ 进入永久运行模式")
+    print("🔄 自动重启机制已启用")
+    print("🛡️ 异常保护机制已启用")
+
+    while retry_count < max_retries:
+        try:
+            print(f"\n🚀 启动尝试 #{retry_count + 1}")
+            print(f"⏰ 当前时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+            # 导入并启动机器人
+            from 核心模块 import main as bot_main
+            result = bot_main()
+
+            # 如果正常退出，说明是手动停止
+            if result == 0:
+                print("✅ 机器人正常退出")
+                return 0
+            else:
+                print(f"⚠️ 机器人异常退出，代码: {result}")
+
+        except KeyboardInterrupt:
+            print("\n⏹️ 收到停止信号，退出永久运行模式")
+            return 0
+        except Exception as e:
+            print(f"❌ 机器人运行异常: {e}")
+
+        # 增加重试计数
+        retry_count += 1
+
+        if retry_count < max_retries:
+            # 计算延迟时间（指数退避）
+            delay = min(base_delay * (2 ** (retry_count - 1)), 300)  # 最大5分钟
+            print(f"⏳ {delay}秒后重新启动... ({retry_count}/{max_retries})")
+            time.sleep(delay)
+        else:
+            print(f"❌ 达到最大重试次数 ({max_retries})，退出")
+            return 1
+
+    return 1
+
 def main():
     """主函数"""
     try:
@@ -90,6 +136,7 @@ def main():
         parser.add_argument('--force', action='store_true', help='强制启动，忽略冲突检测')
         parser.add_argument('--check-only', action='store_true', help='仅检查状态，不启动机器人')
         parser.add_argument('--wait', type=int, default=10, help='等待其他实例的最大分钟数')
+        parser.add_argument('--forever', action='store_true', help='永久运行模式，自动重启')
         args = parser.parse_args()
 
         print_banner()
@@ -153,9 +200,15 @@ def main():
         print("🚀 启动机器人...")
         print(f"⏰ 启动时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-        # 导入并启动机器人
-        from 核心模块 import main as bot_main
-        return bot_main()
+        # 检查是否为永久运行模式
+        if args.forever or os.getenv('GITHUB_ACTIONS'):
+            print("♾️ 永久运行模式启动")
+            return run_forever()
+        else:
+            print("🔄 标准模式启动")
+            # 导入并启动机器人
+            from 核心模块 import main as bot_main
+            return bot_main()
 
     except ImportError as e:
         print(f"❌ 导入失败: {e}")
